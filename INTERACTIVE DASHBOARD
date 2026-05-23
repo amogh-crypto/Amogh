@@ -1,0 +1,285 @@
+import tkinter as tk
+from tkinter import messagebox
+
+
+class StudentDashboard:
+    LIGHT_BG = "lightblue"
+    DARK_BG = "#1f2933"
+    LIGHT_FG = "black"
+    DARK_FG = "white"
+    BUTTON_BG = "white"
+    BUTTON_FG = "black"
+    TITLE_FONT = ("Arial", 16, "bold")
+    LABEL_FONT = ("Arial", 12, "bold")
+    TEXT_FONT = ("Arial", 12)
+
+    def __init__(self, root):
+        self.root = root
+        self.root.title("INTERACTIVE DASHBOARD")
+        self.root.geometry("592x840")
+
+        self.theme = tk.StringVar(value="Light")
+        self.notifications_enabled = tk.BooleanVar(value=True)
+        self.windows = [self.root]
+        self.profile_frames = []
+
+        self.student_details = {
+            "Name": "Amogh",
+            "Age": "20",
+            "Grade": "11th",
+            "School": "National Public School",
+            "City": "Bangalore",
+        }
+        self.marks = {
+            "Maths": 95,
+            "Science": 92,
+            "English": 88,
+            "History": 90,
+            "Geography": 94,
+        }
+
+        self.setup_dashboard()
+        self.apply_theme()
+
+    @property
+    def bg_color(self):
+        return self.LIGHT_BG if self.theme.get() == "Light" else self.DARK_BG
+
+    @property
+    def fg_color(self):
+        return self.LIGHT_FG if self.theme.get() == "Light" else self.DARK_FG
+
+    def setup_dashboard(self):
+        buttons = [
+            ("PROFILE", self.show_profile),
+            ("MARKS", self.show_marks),
+            ("ABOUT", self.show_about),
+            ("SETTINGS", self.show_settings),
+            ("LOGOUT", self.logout),
+        ]
+
+        for index, (text, command) in enumerate(buttons):
+            self.create_button(self.root, text, command).place(
+                x=50, y=50 + index * 70, width=190, height=50
+            )
+
+    def create_window(self, title, size="400x400"):
+        window = tk.Toplevel(self.root)
+        window.title(title)
+        window.geometry(size)
+        self.windows.append(window)
+        self.apply_theme()
+        return window
+
+    def create_label(self, parent, text, font=None, **options):
+        label = tk.Label(
+            parent,
+            text=text,
+            bg=self.bg_color,
+            fg=self.fg_color,
+            font=font or self.TEXT_FONT,
+            **options,
+        )
+        return label
+
+    def create_button(self, parent, text, command):
+        return tk.Button(
+            parent,
+            text=text,
+            command=command,
+            bg=self.BUTTON_BG,
+            fg=self.BUTTON_FG,
+            font=self.LABEL_FONT,
+        )
+
+    def add_title(self, parent, text):
+        self.create_label(parent, text, self.TITLE_FONT).pack(pady=20)
+
+    def add_label_pair(self, parent, label_text, value_text, row):
+        self.create_label(parent, f"{label_text}:", self.LABEL_FONT).grid(
+            row=row, column=0, padx=(40, 20), pady=6, sticky="w"
+        )
+        self.create_label(
+            parent,
+            str(value_text),
+            self.TEXT_FONT,
+            wraplength=220,
+            justify="left",
+        ).grid(row=row, column=1, padx=(0, 20), pady=6, sticky="w")
+
+    def render_profile_details(self, frame):
+        for widget in frame.winfo_children():
+            widget.destroy()
+
+        for row, (label, value) in enumerate(self.student_details.items()):
+            self.add_label_pair(frame, label, value, row)
+
+    def refresh_profiles(self):
+        active_frames = []
+
+        for frame in self.profile_frames:
+            if frame.winfo_exists():
+                self.render_profile_details(frame)
+                active_frames.append(frame)
+
+        self.profile_frames = active_frames
+
+    def show_profile(self):
+        profile_window = self.create_window("PROFILE", "460x500")
+        self.add_title(profile_window, "STUDENT PROFILE")
+
+        details_frame = tk.Frame(profile_window, bg=self.bg_color)
+        details_frame.pack(fill="both", expand=True)
+        self.profile_frames.append(details_frame)
+        self.render_profile_details(details_frame)
+
+        self.create_button(
+            profile_window, "ADD MORE DETAILS", self.show_add_more_details
+        ).pack(pady=20)
+
+    def show_add_more_details(self):
+        details_window = self.create_window("ADD MORE DETAILS", "420x320")
+        self.add_title(details_window, "ADD MORE DETAILS")
+
+        self.create_label(details_window, "Category:", self.LABEL_FONT).place(
+            x=50, y=110
+        )
+        category_entry = tk.Entry(
+            details_window, width=25, font=self.TEXT_FONT)
+        category_entry.place(x=170, y=110)
+
+        self.create_label(details_window, "Response:", self.LABEL_FONT).place(
+            x=50, y=160
+        )
+        response_entry = tk.Entry(
+            details_window, width=25, font=self.TEXT_FONT)
+        response_entry.place(x=170, y=160)
+
+        self.create_button(
+            details_window,
+            "SAVE",
+            lambda: self.save_profile_detail(
+                category_entry.get(), response_entry.get(), details_window
+            ),
+        ).place(x=155, y=220, width=100, height=40)
+
+    def save_profile_detail(self, category, response, window):
+        category = category.strip()
+        response = response.strip()
+
+        if not category or not response:
+            messagebox.showwarning(
+                "Missing Details", "Please enter both category and response."
+            )
+            return
+
+        self.student_details[category] = response
+        self.refresh_profiles()
+        window.destroy()
+        messagebox.showinfo("Saved", "Details have been saved successfully!")
+
+    def show_marks(self):
+        marks_window = self.create_window("MARKS")
+        self.add_title(marks_window, "MARKS")
+
+        marks_frame = tk.Frame(marks_window, bg=self.bg_color)
+        marks_frame.pack(fill="both", expand=True)
+
+        for row, (subject, mark) in enumerate(self.marks.items()):
+            self.add_label_pair(marks_frame, subject, mark, row)
+
+        self.add_label_pair(
+            marks_frame, "Total", sum(self.marks.values()), len(self.marks)
+        )
+
+    def show_about(self):
+        about_window = self.create_window("ABOUT")
+        self.add_title(about_window, "ABOUT")
+
+        about_text = (
+            "Hello, I am Amogh, a student in Class 11th at National Public "
+            "School in Bangalore. I have been studying here for the past few "
+            "years and have developed a strong interest in science and "
+            "mathematics. I enjoy participating in science fairs and math "
+            "competitions. I also like to play music."
+        )
+
+        self.create_label(
+            about_window,
+            about_text,
+            self.TEXT_FONT,
+            wraplength=350,
+            justify="left",
+        ).pack(padx=25, pady=10)
+
+    def show_settings(self):
+        settings_window = self.create_window("SETTINGS")
+        self.add_title(settings_window, "SETTINGS")
+
+        self.create_label(settings_window, "Theme:", self.LABEL_FONT).place(
+            x=50, y=100
+        )
+
+        for y_position, theme_name in [(100, "Light"), (130, "Dark")]:
+            tk.Radiobutton(
+                settings_window,
+                text=theme_name,
+                variable=self.theme,
+                value=theme_name,
+                command=self.apply_theme,
+                bg=self.bg_color,
+                fg=self.fg_color,
+                selectcolor=self.bg_color,
+                font=self.TEXT_FONT,
+            ).place(x=150, y=y_position)
+
+        tk.Checkbutton(
+            settings_window,
+            text="Enable Notifications",
+            variable=self.notifications_enabled,
+            bg=self.bg_color,
+            fg=self.fg_color,
+            selectcolor=self.bg_color,
+            font=self.TEXT_FONT,
+        ).place(x=50, y=180)
+
+    def apply_theme(self):
+        active_windows = []
+
+        for window in self.windows:
+            if window.winfo_exists():
+                window.configure(bg=self.bg_color)
+                self.update_child_colors(window)
+                active_windows.append(window)
+
+        self.windows = active_windows
+
+    def update_child_colors(self, parent):
+        for child in parent.winfo_children():
+            if isinstance(child, (tk.Label, tk.Frame, tk.Radiobutton, tk.Checkbutton)):
+                child.configure(bg=self.bg_color)
+
+            if isinstance(child, (tk.Label, tk.Radiobutton, tk.Checkbutton)):
+                child.configure(fg=self.fg_color)
+
+            if isinstance(child, (tk.Radiobutton, tk.Checkbutton)):
+                child.configure(selectcolor=self.bg_color)
+
+            if isinstance(child, tk.Entry):
+                child.configure(
+                    bg="white" if self.theme.get() == "Light" else "#111827",
+                    fg=self.fg_color,
+                    insertbackground=self.fg_color,
+                )
+
+            self.update_child_colors(child)
+
+    def logout(self):
+        if messagebox.askyesno("Logout", "Are you sure you want to logout?"):
+            self.root.destroy()
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    StudentDashboard(root)
+    root.mainloop()
